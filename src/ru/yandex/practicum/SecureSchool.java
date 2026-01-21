@@ -2,123 +2,93 @@ package ru.yandex.practicum;
 
 import ru.yandex.practicum.impl.SecureStateImpl;
 
-import java.util.Map;
+import java.util.Arrays;
 import java.util.Scanner;
 
 public class SecureSchool {
 
-    private static String currentUser;
+    private static final Scanner sc = new Scanner(System.in);
+    private static String currentUser = null;
     private static final SecureState state = new SecureStateImpl();
-    private static final Scanner scanner = new Scanner(System.in);
 
     public static void main(String[] args) {
-        String command = "X";
-        do {
+        boolean running = true;
+
+        while (running) {
             showState();
+
             if (currentUser == null) {
-                showLogin();
-            } else {
-                command = showMenu();
-                state.doAction(currentUser, command.split(" "));
-                if(command.equals("Q")){
-                    currentUser = null;
+                if (!doLogin()) {
+                    continue;
                 }
+            } else {
+                running = processCommand();
             }
-        } while (command.equals("X"));
-        showHistory();
+        }
     }
 
-    private static String showMenu() {
-        System.out.println("== [ Menu ] ==");
-        System.out.println("E) Enter area:   \n      1) School ");
-        System.out.println("     2) Owl Cabin");
-        System.out.println("     3) Teachers Room");
-        System.out.println("     4) Class A, B, C, or D");
-        System.out.println("L) Leave area");
-        System.out.println("J) Watch journal");
-        System.out.println("H) Show action history");
-        System.out.println("Q) Logout");
-        System.out.println();
-        System.out.println("X) Exit program");
-        String command = scanner.nextLine();
-        if (command.isBlank()) {
-            command = null;
+    private static boolean processCommand() {
+        String cmd = showMenuAndRead();
+        if (cmd == null || cmd.isBlank()) return true;
+
+        if ("exit".equalsIgnoreCase(cmd)) {
+            System.out.println("Программа завершена.");
+            return false;
         }
-        if (command != null) {
-            String[] commandParts = command.toUpperCase().split(" ");
-            switch (commandParts[0]) {
-                case "L":
-                case "J":
-                case "Q":
-                case "H":
-                case "X":
-                    if (commandParts.length > 1) {
-                        System.out.println("Too many arguments");
-                        command = null;
-                    }
-                    break;
-                case "E":
-                    if(commandParts.length < 2){
-                        System.out.println("Too few arguments");
-                        command = null;
-                    } else {
-                        try {
-                            int area = Integer.parseInt(commandParts[1]);
-                            if (area > 1 && area <= 3) {
-                                if (commandParts.length > 2) {
-                                    System.out.println("Too many arguments");
-                                    command = null;
-                                }
-                            } else if (area == 4){
-                                if (commandParts.length == 3) {
-                                    if(!"ABCD".contains(commandParts[2])){
-                                        System.out.println("Invalid arguments");
-                                        command = null;
-                                    }
-                                } else {
-                                    System.out.println("Wrong class");
-                                    command = null;
-                                }
-                            } else {
-                                System.out.println("Wrong area");
-                                command = null;
-                            }
-                        } catch (NumberFormatException e) {
-                            System.out.println("Invalid area number");
-                            command = null;
-                        }
-                    }
-                    break;
-                default:
-                    command = null;
-            }
+
+        String result = state.doAction(
+                cmd.split("\\s+")[0],
+                Arrays.copyOfRange(cmd.split("\\s+"), 1, cmd.split("\\s+").length)
+        );
+        System.out.println(result);
+
+        return true;
+    }
+
+    private static boolean doLogin() {
+        System.out.print("Логин (или exit для выхода): ");
+        String login = sc.nextLine().trim();
+
+        if ("exit".equalsIgnoreCase(login)) {
+            System.out.println("Программа завершена.");
+            System.exit(0);
+        }
+
+        System.out.print("Пароль: ");
+        String pass = sc.nextLine().trim();
+
+        String res = state.doAction("login", login, pass);
+        if (res.contains("Неверный") || res.contains("failed")) {
+            System.out.println("Ошибка входа: " + res);
+            return false;
         } else {
-            System.out.println("Некорректная команда, попробуйте снова...");
+            currentUser = res;
+            System.out.println("Добро пожаловать, " + currentUser);
+            return true;
         }
-        return command;
     }
 
-    private static void showLogin() {
-        System.out.println("Введите логин:");
-        String login = scanner.nextLine();
-        System.out.println("Введите пароль:");
-        String password = scanner.nextLine();
-        currentUser = state.doAction("login", login, password);
+    private static String showMenuAndRead() {
+        System.out.println("\n=== Меню ===");
+        System.out.println("enter school         — войти в школу");
+        System.out.println("enter owl            — кабинет Совы");
+        System.out.println("enter teachers       — учительская");
+        System.out.println("enter A / B / C / D  — в класс");
+        System.out.println("leave <место>        — выйти");
+        System.out.println("watch                — посмотреть журнал");
+        System.out.println("edit                 — редактировать журнал (если разрешено)");
+        System.out.println("history              — показать историю действий");
+        System.out.println("logout               — выйти из аккаунта");
+        System.out.println("exit                 — завершить программу");
+        System.out.print("\nВаша команда → ");
+        return sc.nextLine().trim();
     }
 
     private static void showState() {
-        StringBuilder stateBuilder = new StringBuilder("--===[ MAGIC SCHOOL ]===--\n");
-        for(Object area: state.getAreaList()){
-            stateBuilder.append(area).append("\n");
+        System.out.println("\n───────────── LOCATIONS ─────────────");
+        for (Object o : state.getAreaList()) {
+            System.out.println("  " + o);
         }
-        System.out.println(stateBuilder);
+        System.out.println("─────────────────────────────────────");
     }
-
-    private static void showHistory() {
-        System.out.println("-- [ DAILY HISTORY ] --");
-        for(Object action:  state.getActionHistory()){
-            System.out.println(action);
-        }
-    }
-
 }
