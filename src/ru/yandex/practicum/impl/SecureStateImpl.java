@@ -8,6 +8,7 @@ import ru.yandex.practicum.roles.TeacherRole;
 import ru.yandex.practicum.security.*;
 
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.*;
 
 public class SecureStateImpl implements SecureState, SecureContext {
@@ -182,7 +183,7 @@ public class SecureStateImpl implements SecureState, SecureContext {
     }
 
     private void log(String msg) {
-        history.add(LocalDateTime.now() + "  " + msg);
+        history.add(LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")) + "  " + msg);
     }
 
     @Override

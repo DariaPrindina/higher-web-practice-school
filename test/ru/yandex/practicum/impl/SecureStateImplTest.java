@@ -103,7 +103,7 @@ class SecureStateImplTest {
 
         assertTrue(result.contains("roo"));
         assertTrue(result.contains("Заклинания → 5"));
-        assertFalse(result.contains("Другие ученики"));
+        assertFalse(result.contains("piglet"));
     }
 
     @Test
@@ -168,5 +168,17 @@ class SecureStateImplTest {
 
         assertTrue(state.getAreaList().isEmpty());
         assertNull(state.getCurrentUser());
+    }
+
+    @Test
+    void occupied_keepsTeacherPresenceAfterStudentLogin() {
+        state.doAction("login", "piglet", "2@");
+        state.doAction("enter", "school");
+
+        state.doAction("login", "roo", "5%");
+        state.doAction("enter", "school");
+
+        String result = state.doAction("watch");
+        assertTrue(result.contains("Заклинания → 5"));
     }
 }

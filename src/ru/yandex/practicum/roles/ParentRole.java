@@ -11,7 +11,6 @@ public class ParentRole extends AbstractRole {
         super("Parent", Set.of(
                 new SimplePermission(Action.ENTER, LocationType.SCHOOL),
                 new SimplePermission(Action.LEAVE, null),
-                new ConditionalPermission(Action.WATCH, null, new OwnChildAndTeacherPresentCondition())
-        ));
+                new SimplePermission(Action.WATCH, null)        ));
     }
 }

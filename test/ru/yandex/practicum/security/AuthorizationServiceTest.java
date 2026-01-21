@@ -82,9 +82,10 @@ class AuthorizationServiceTest {
 
         Location classA = new Location(LocationType.CLASS_A, "A");
         assertFalse(authz.isAllowed(roo, Action.ENTER, classA, context),
-                "Ученик не должен входить в класс без условия учителя");
+                "Ученик не должен входить в класс без учителя");
 
-        assertFalse(authz.isAllowed(roo, Action.WATCH, null, context));
+        assertTrue(authz.isAllowed(roo, Action.WATCH, null, context),
+                "Ученик имеет право смотреть журнал, но без учителя не увидит журнал");
     }
 
     @Test
@@ -95,8 +96,8 @@ class AuthorizationServiceTest {
 
         assertFalse(authz.isAllowed(kanga, Action.ENTER, new Location(LocationType.CLASS_A, "A"), context));
 
-        assertFalse(authz.isAllowed(kanga, Action.WATCH, null, context),
-                "Родитель не должен смотреть журнал без учителя");
+        assertTrue(authz.isAllowed(kanga, Action.WATCH, null, context),
+                "Родитель имеет право смотреть журнал, но без учителя нет");
 
         User teacher = getUser("piglet");
         context.doAction("login", "piglet", "2@");

@@ -24,7 +24,7 @@ class ParentRoleTest {
 
         boolean hasEnterSchool = false;
         boolean hasLeaveAny = false;
-        boolean hasConditionalWatch = false;
+        boolean hasSimpleWatch = false;
 
         for (Permission p : permissions) {
             if (p instanceof SimplePermission sp) {
@@ -34,17 +34,15 @@ class ParentRoleTest {
                 if (sp.getAction() == Action.LEAVE && sp.getLocationType() == null) {
                     hasLeaveAny = true;
                 }
-            } else if (p instanceof ConditionalPermission cp) {
-                if (cp.getAction() == Action.WATCH && cp.getLocationType() == null) {
-                    hasConditionalWatch = true;
-                    assertInstanceOf(OwnChildAndTeacherPresentCondition.class, cp.getCondition());
+                if (sp.getAction() == Action.WATCH && sp.getLocationType() == null) {
+                    hasSimpleWatch = true;
                 }
             }
         }
 
         assertTrue(hasEnterSchool, "Должно быть разрешение ENTER в SCHOOL");
         assertTrue(hasLeaveAny, "Должно быть разрешение LEAVE из любой локации");
-        assertTrue(hasConditionalWatch, "Должно быть условное разрешение WATCH с OwnChildAndTeacherPresentCondition");
+        assertTrue(hasSimpleWatch, "Должно быть простое разрешение WATCH");
     }
 
     @Test

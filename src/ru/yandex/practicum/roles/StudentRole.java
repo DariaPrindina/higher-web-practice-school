@@ -15,7 +15,6 @@ public class StudentRole extends AbstractRole {
                 new ConditionalPermission(Action.ENTER, LocationType.CLASS_B, new TeacherPresentCondition()),
                 new ConditionalPermission(Action.ENTER, LocationType.CLASS_C, new TeacherPresentCondition()),
                 new ConditionalPermission(Action.ENTER, LocationType.CLASS_D, new TeacherPresentCondition()),
-                new ConditionalPermission(Action.WATCH, null, new TeacherPresentCondition())
-        ));
+                new SimplePermission(Action.WATCH, null)        ));
     }
 }

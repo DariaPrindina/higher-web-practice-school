@@ -25,7 +25,7 @@ class StudentRoleTest {
         boolean hasEnterSchool = false;
         boolean hasLeaveAny = false;
         int classEnterCount = 0;
-        boolean hasWatchConditional = false;
+        boolean hasSimpleWatch = false;
 
         for (Permission p : permissions) {
             if (p instanceof SimplePermission sp) {
@@ -35,13 +35,12 @@ class StudentRoleTest {
                 if (sp.getAction() == Action.LEAVE && sp.getLocationType() == null) {
                     hasLeaveAny = true;
                 }
+                if (sp.getAction() == Action.WATCH && sp.getLocationType() == null) {
+                    hasSimpleWatch = true;
+                }
             } else if (p instanceof ConditionalPermission cp) {
                 if (cp.getLocationType() != null && cp.getLocationType().name().startsWith("CLASS_")) {
                     classEnterCount++;
-                    assertInstanceOf(TeacherPresentCondition.class, cp.getCondition());
-                }
-                if (cp.getAction() == Action.WATCH && cp.getLocationType() == null) {
-                    hasWatchConditional = true;
                     assertInstanceOf(TeacherPresentCondition.class, cp.getCondition());
                 }
             }
@@ -50,6 +49,6 @@ class StudentRoleTest {
         assertTrue(hasEnterSchool);
         assertTrue(hasLeaveAny);
         assertEquals(4, classEnterCount, "Должно быть 4 условных разрешения на вход в классы A,B,C,D");
-        assertTrue(hasWatchConditional, "Должно быть условное разрешение WATCH с TeacherPresentCondition");
+        assertTrue(hasSimpleWatch, "Должно быть простое разрешение WATCH");
     }
 }
