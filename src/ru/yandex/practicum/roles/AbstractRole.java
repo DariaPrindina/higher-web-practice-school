@@ -12,7 +12,9 @@ public abstract class AbstractRole implements Role {
 
     public AbstractRole(String name, Set<Permission> permissions) {
         this.name = name;
-        this.permissions = Collections.unmodifiableSet(permissions);
+        this.permissions = permissions != null
+                ? Collections.unmodifiableSet(permissions)
+                : Collections.emptySet();
     }
 
     @Override

@@ -50,15 +50,15 @@ public class SecureStateImpl implements SecureState, SecureContext {
         if (currentUser == null) return "Сначала войдите в систему";
 
         return switch (action.toLowerCase()) {
-            case "enter"  -> cmdEnter(args);
-            case "leave"  -> cmdLeave(args);
-            case "watch"  -> cmdWatch(args);
+            case "enter" -> cmdEnter(args);
+            case "leave" -> cmdLeave(args);
+            case "watch" -> cmdWatch(args);
             case "history" -> {
                 StringBuilder sb = new StringBuilder("История действий:\n");
                 history.forEach(sb::append);
                 yield sb.toString();
             }
-            case "edit"   -> cmdEdit(args);
+            case "edit" -> cmdEdit(args);
             case "logout" -> {
                 if (currentUser != null) {
                     occupied.clear();
@@ -67,13 +67,17 @@ public class SecureStateImpl implements SecureState, SecureContext {
                 }
                 yield "Вы вышли из аккаунта";
             }
-            default       -> "Неизвестная команда: " + action;
+            default -> "Неизвестная команда: " + action;
         };
     }
 
     private String cmdEnter(String[] args) {
         if (args.length == 0) return "Укажите куда войти";
         Location loc = parseLocation(args);
+
+        if (loc == null) {
+            return "Неизвестная команда: enter";
+        }
 
         if (!authz.isAllowed(currentUser, Action.ENTER, loc, this)) {
             return "Доступ запрещён → " + loc;
@@ -106,14 +110,33 @@ public class SecureStateImpl implements SecureState, SecureContext {
             if (!new TeacherPresentCondition().isSatisfied(currentUser, null, this)) {
                 return "Нельзя смотреть журнал без учителя";
             }
-            journal.getAllGrades().forEach((s, m) ->
-                    sb.append(s).append(" → ").append(m).append("\n"));
+            String studentLogin = currentUser.getLogin();
+            Map<String, Integer> grades = journal.getGradesForStudent(studentLogin);
+            if (grades.isEmpty()) {
+                sb.append("У вас пока нет оценок.\n");
+            } else {
+                grades.forEach((subject, grade) -> sb.append(subject).append(" → ").append(grade).append("\n"));
+            }
         } else if (currentUser.getRole() instanceof ParentRole) {
+            if (!new TeacherPresentCondition().isSatisfied(currentUser, null, this)) {
+                return "Нельзя смотреть журнал без учителя";
+            }
             String child = currentUser.getChildLogin();
             if (child == null) return "У вас нет ребёнка в школе";
-            sb.append("Оценки ").append(child).append(": ").append(journal.getGradesForStudent(child));
+            sb.append("Оценки ").append(child).append(":\n");
+            Map<String, Integer> grades = journal.getGradesForStudent(child);
+            if (grades.isEmpty()) {
+                sb.append("У вашего ребёнка пока нет оценок.\n");
+            } else {
+                grades.forEach((subject, grade) ->
+                        sb.append(subject).append(" → ").append(grade).append("\n"));
+            }
         } else {
-            journal.getAllGrades().forEach((s, m) -> sb.append(s).append(" → ").append(m).append("\n"));
+            journal.getAllGrades().forEach((student, subjects) -> {
+                sb.append("Ученик: ").append(student).append("\n");
+                subjects.forEach((subject, grade) ->
+                        sb.append("  ").append(subject).append(" → ").append(grade).append("\n"));
+            });
         }
 
         log(currentUser.getLogin() + " посмотрел журнал");
@@ -147,14 +170,14 @@ public class SecureStateImpl implements SecureState, SecureContext {
     private Location parseLocation(String[] args) {
         String target = args[0].toUpperCase();
         return switch (target) {
-            case "SCHOOL"         -> new Location(LocationType.SCHOOL);
-            case "OWL", "CABIN"   -> new Location(LocationType.OWL_CABINET);
+            case "SCHOOL" -> new Location(LocationType.SCHOOL);
+            case "OWL", "CABIN" -> new Location(LocationType.OWL_CABINET);
             case "TEACHERS", "ROOM" -> new Location(LocationType.TEACHERS_ROOM);
-            case "A"              -> new Location(LocationType.CLASS_A, "A");
-            case "B"              -> new Location(LocationType.CLASS_B, "B");
-            case "C"              -> new Location(LocationType.CLASS_C, "C");
-            case "D"              -> new Location(LocationType.CLASS_D, "D");
-            default               -> null;
+            case "A" -> new Location(LocationType.CLASS_A, "A");
+            case "B" -> new Location(LocationType.CLASS_B, "B");
+            case "C" -> new Location(LocationType.CLASS_C, "C");
+            case "D" -> new Location(LocationType.CLASS_D, "D");
+            default -> null;
         };
     }
 
@@ -169,13 +192,12 @@ public class SecureStateImpl implements SecureState, SecureContext {
 
     @Override
     public boolean isTeacherPresent(Location location) {
-        if (currentUser == null) return false;
-
-        if (currentUser.getRole() instanceof TeacherRole) {
-            return occupied.contains(location);
+        if (location == null) {
+            return occupied.contains(new Location(LocationType.SCHOOL)) ||
+                    occupied.stream().anyMatch(l -> l.getType().name().startsWith("CLASS_"));
         }
 
-        return false;
+        return occupied.contains(location);
     }
 
     @Override

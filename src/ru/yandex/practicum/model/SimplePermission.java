@@ -18,4 +18,13 @@ public class SimplePermission implements Permission {
         if (locationType == null) return true;
         return location != null && location.getType() == locationType;
     }
+
+    public Action getAction() {
+        return action;
+    }
+
+    public LocationType getLocationType() {
+        return locationType;
+    }
+
 }

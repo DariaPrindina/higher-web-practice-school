@@ -21,4 +21,16 @@ public class ConditionalPermission implements Permission {
         }
         return condition.isSatisfied(user, location, context);
     }
+
+    public Action getAction() {
+        return action;
+    }
+
+    public LocationType getLocationType() {
+        return locationType;
+    }
+
+    public Condition getCondition() {
+        return condition;
+    }
 }
