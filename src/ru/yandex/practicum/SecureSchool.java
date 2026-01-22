@@ -12,59 +12,63 @@ public class SecureSchool {
     private static final SecureState state = new SecureStateImpl();
 
     public static void main(String[] args) {
-        boolean running = true;
-
-        while (running) {
-            showState();
+        while (true) {
+            if (currentUser != null) {
+                showState();
+            }
 
             if (currentUser == null) {
-                if (!doLogin()) {
-                    continue;
+                boolean success = doLogin();
+                if (!success) {
+                    return;
                 }
-            } else {
-                running = processCommand();
+                continue;
+            }
+
+            String cmd = showMenuAndRead();
+            if (cmd == null || cmd.isBlank()) continue;
+
+            if ("exit".equalsIgnoreCase(cmd)) {
+                System.out.println("Программа завершена.");
+                return;
+            }
+
+            String[] parts = cmd.trim().split("\\s+");
+            String action = parts[0];
+            String[] commandArgs = Arrays.copyOfRange(parts, 1, parts.length);
+
+            String result = state.doAction(action, commandArgs);
+            System.out.println(result);
+
+            if ("logout".equalsIgnoreCase(action)) {
+                currentUser = null;
             }
         }
     }
 
-    private static boolean processCommand() {
-        String cmd = showMenuAndRead();
-        if (cmd == null || cmd.isBlank()) return true;
-
-        if ("exit".equalsIgnoreCase(cmd)) {
-            System.out.println("Программа завершена.");
-            return false;
-        }
-
-        String result = state.doAction(
-                cmd.split("\\s+")[0],
-                Arrays.copyOfRange(cmd.split("\\s+"), 1, cmd.split("\\s+").length)
-        );
-        System.out.println(result);
-
-        return true;
-    }
-
     private static boolean doLogin() {
-        System.out.print("Логин (или exit для выхода): ");
-        String login = sc.nextLine().trim();
+        while (true) {
+            System.out.print("Логин (или exit для выхода): ");
+            String login = sc.nextLine().trim();
 
-        if ("exit".equalsIgnoreCase(login)) {
-            System.out.println("Программа завершена.");
-            System.exit(0);
-        }
+            if ("exit".equalsIgnoreCase(login)) {
+                System.out.println("Программа завершена.");
+                return false;
+            }
 
-        System.out.print("Пароль: ");
-        String pass = sc.nextLine().trim();
+            System.out.print("Пароль: ");
+            String pass = sc.nextLine().trim();
 
-        String res = state.doAction("login", login, pass);
-        if (res.contains("Неверный") || res.contains("failed")) {
-            System.out.println("Ошибка входа: " + res);
-            return false;
-        } else {
-            currentUser = res;
-            System.out.println("Добро пожаловать, " + currentUser);
-            return true;
+            String res = state.doAction("login", login, pass);
+
+            if (res.contains("Неверный") || res.contains("failed")) {
+                System.out.println("Ошибка входа: " + res);
+                System.out.println("Попробуйте снова.\n");
+            } else {
+                currentUser = res;
+                System.out.println("Добро пожаловать, " + currentUser);
+                return true;
+            }
         }
     }
 

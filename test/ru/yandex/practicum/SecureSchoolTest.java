@@ -124,6 +124,7 @@ class SecureSchoolTest {
         state.doAction("enter", "school");
 
         state.doAction("login", "kanga", "??");
+        state.doAction("enter", "school");
         String result = state.doAction("watch");
 
         assertTrue(result.contains("roo"));
@@ -134,6 +135,7 @@ class SecureSchoolTest {
     @Test
     void watch_as_student_without_teacher_denied() {
         state.doAction("login", "roo", "5%");
+        state.doAction("enter", "school");
         String result = state.doAction("watch");
         assertEquals("Нельзя смотреть журнал без учителя", result);
     }
@@ -141,6 +143,7 @@ class SecureSchoolTest {
     @Test
     void watch_as_teacher_shows_all_grades() {
         state.doAction("login", "piglet", "2@");
+        state.doAction("enter", "school");
         String result = state.doAction("watch");
         assertTrue(result.contains("roo"));
         assertTrue(result.contains("Заклинания"));
@@ -152,6 +155,7 @@ class SecureSchoolTest {
     @Test
     void edit_as_teacher_adds_grade() {
         state.doAction("login", "piglet", "2@");
+        state.doAction("enter", "school");
         String result = state.doAction("edit", "roo", "Математика", "4");
         assertEquals("Оценка добавлена: roo → Математика = 4", result);
 

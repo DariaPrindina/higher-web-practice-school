@@ -18,9 +18,10 @@ public class SecureStateImpl implements SecureState, SecureContext {
     private final AuthorizationService authz = new AuthorizationService();
 
     private final List<String> history = new ArrayList<>();
-    public final Set<Location> occupied = new HashSet<>();
 
     private final Journal journal = new Journal();
+
+    private final Map<Location, Set<User>> occupants = new HashMap<>();
 
     public SecureStateImpl() {
         journal.addGrade("roo", "Заклинания", 5);
@@ -30,7 +31,7 @@ public class SecureStateImpl implements SecureState, SecureContext {
 
     @Override
     public List<Object> getAreaList() {
-        return new ArrayList<>(occupied);
+        return new ArrayList<>(occupants.keySet());
     }
 
     @Override
@@ -56,13 +57,19 @@ public class SecureStateImpl implements SecureState, SecureContext {
             case "watch" -> cmdWatch(args);
             case "history" -> {
                 StringBuilder sb = new StringBuilder("История действий:\n");
-                history.forEach(sb::append);
+                for (String entry : history) {
+                    sb.append(entry).append("\n");
+                }
                 yield sb.toString();
             }
             case "edit" -> cmdEdit(args);
             case "logout" -> {
                 if (currentUser != null) {
-                    occupied.clear();
+                    for (Set<User> users : occupants.values()) {
+                        users.remove(currentUser);
+                    }
+                    occupants.values().removeIf(Set::isEmpty);
+
                     log(currentUser.getLogin() + " вышел из системы");
                     currentUser = null;
                 }
@@ -75,16 +82,13 @@ public class SecureStateImpl implements SecureState, SecureContext {
     private String cmdEnter(String[] args) {
         if (args.length == 0) return "Укажите куда войти";
         Location loc = parseLocation(args);
-
-        if (loc == null) {
-            return "Неизвестная команда: enter";
-        }
+        if (loc == null) return "Неизвестная команда: enter";
 
         if (!authz.isAllowed(currentUser, Action.ENTER, loc, this)) {
             return "Доступ запрещён → " + loc;
         }
 
-        occupied.add(loc);
+        occupants.computeIfAbsent(loc, k -> new HashSet<>()).add(currentUser);
         log(currentUser.getLogin() + " вошёл в " + loc);
         return "Вы вошли в " + loc;
     }
@@ -93,7 +97,11 @@ public class SecureStateImpl implements SecureState, SecureContext {
         if (args.length == 0) return "Укажите откуда выйти";
         Location loc = parseLocation(args);
 
-        if (occupied.remove(loc)) {
+        Set<User> usersInLoc = occupants.get(loc);
+        if (usersInLoc != null && usersInLoc.remove(currentUser)) {
+            if (usersInLoc.isEmpty()) {
+                occupants.remove(loc);
+            }
             log(currentUser.getLogin() + " вышел из " + loc);
             return "Вы вышли из " + loc;
         }
@@ -105,12 +113,22 @@ public class SecureStateImpl implements SecureState, SecureContext {
             return "Нет права смотреть журнал";
         }
 
+        Location school = new Location(LocationType.SCHOOL);
+        Set<User> usersInSchool = occupants.get(school);
+        if (usersInSchool == null || !usersInSchool.contains(currentUser)) {
+            return "Нельзя смотреть журнал вне школы. Сначала выполните: enter school";
+        }
+
+        boolean needsTeacherCheck = currentUser.getRole() instanceof StudentRole ||
+                currentUser.getRole() instanceof ParentRole;
+
+        if (needsTeacherCheck && !new TeacherPresentCondition().isSatisfied(currentUser, null, this)) {
+            return "Нельзя смотреть журнал без учителя";
+        }
+
         StringBuilder sb = new StringBuilder("Журнал оценок:\n");
 
         if (currentUser.getRole() instanceof StudentRole) {
-            if (!new TeacherPresentCondition().isSatisfied(currentUser, null, this)) {
-                return "Нельзя смотреть журнал без учителя";
-            }
             String studentLogin = currentUser.getLogin();
             Map<String, Integer> grades = journal.getGradesForStudent(studentLogin);
             if (grades.isEmpty()) {
@@ -119,9 +137,6 @@ public class SecureStateImpl implements SecureState, SecureContext {
                 grades.forEach((subject, grade) -> sb.append(subject).append(" → ").append(grade).append("\n"));
             }
         } else if (currentUser.getRole() instanceof ParentRole) {
-            if (!new TeacherPresentCondition().isSatisfied(currentUser, null, this)) {
-                return "Нельзя смотреть журнал без учителя";
-            }
             String child = currentUser.getChildLogin();
             if (child == null) return "У вас нет ребёнка в школе";
             sb.append("Оценки ").append(child).append(":\n");
@@ -129,8 +144,7 @@ public class SecureStateImpl implements SecureState, SecureContext {
             if (grades.isEmpty()) {
                 sb.append("У вашего ребёнка пока нет оценок.\n");
             } else {
-                grades.forEach((subject, grade) ->
-                        sb.append(subject).append(" → ").append(grade).append("\n"));
+                grades.forEach((subject, grade) -> sb.append(subject).append(" → ").append(grade).append("\n"));
             }
         } else {
             journal.getAllGrades().forEach((student, subjects) -> {
@@ -194,11 +208,15 @@ public class SecureStateImpl implements SecureState, SecureContext {
     @Override
     public boolean isTeacherPresent(Location location) {
         if (location == null) {
-            return occupied.contains(new Location(LocationType.SCHOOL)) ||
-                    occupied.stream().anyMatch(l -> l.getType().name().startsWith("CLASS_"));
+            return occupants.values().stream()
+                    .flatMap(Set::stream)
+                    .anyMatch(u -> u.getRole() instanceof TeacherRole);
         }
 
-        return occupied.contains(location);
+        Set<User> usersHere = occupants.get(location);
+        if (usersHere == null) return false;
+
+        return usersHere.stream().anyMatch(u -> u.getRole() instanceof TeacherRole);
     }
 
     @Override

@@ -74,6 +74,7 @@ class SecureStateImplTest {
     @Test
     void student_cannotWatchJournalWithoutTeacher() {
         state.doAction("login", "roo", "5%");
+        state.doAction("enter", "school");
         String result = state.doAction("watch");
         assertEquals("Нельзя смотреть журнал без учителя", result);
     }
@@ -99,6 +100,7 @@ class SecureStateImplTest {
         state.doAction("enter", "school");
 
         state.doAction("login", "kanga", "??");
+        state.doAction("enter", "school");
         String result = state.doAction("watch");
 
         assertTrue(result.contains("roo"));
@@ -109,6 +111,7 @@ class SecureStateImplTest {
     @Test
     void parent_cannotWatchJournalWithoutTeacher() {
         state.doAction("login", "kanga", "??");
+        state.doAction("enter", "school");
         String result = state.doAction("watch");
         assertEquals("Нельзя смотреть журнал без учителя", result);
     }
@@ -116,6 +119,7 @@ class SecureStateImplTest {
     @Test
     void teacher_canWatchAllGrades() {
         state.doAction("login", "piglet", "2@");
+        state.doAction("enter", "school");
         String result = state.doAction("watch");
         assertTrue(result.contains("roo"));
         assertTrue(result.contains("Заклинания → 5"));
@@ -126,6 +130,7 @@ class SecureStateImplTest {
     @Test
     void teacher_canEditJournal() {
         state.doAction("login", "piglet", "2@");
+        state.doAction("enter", "school");
         String result = state.doAction("edit", "roo", "Математика", "4");
         assertEquals("Оценка добавлена: roo → Математика = 4", result);
 
